@@ -1,7 +1,10 @@
 services:
   - type: web
-    name: food-ai-calorie-app
+    name: food-ai-webapp
     env: python
+    plan: free
+
+    runtime: python-3.10
+
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
-    plan: free
