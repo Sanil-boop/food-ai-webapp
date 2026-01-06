@@ -1,28 +1,51 @@
-from flask import Flask, render_template, request
-import tensorflow as tf
-import numpy as np
-import json
 import os
+import json
+import numpy as np
+from flask import Flask, render_template, request
+from keras.models import load_model
 from tensorflow.keras.preprocessing import image
-
-# ---------- Load Model ----------
-model = tf.keras.models.load_model("food101_lightweight_mobilenet.h5")
-
-# ---------- Load Class Names ----------
-with open("class_names.json") as f:
-    class_names = json.load(f)
-
-# ---------- Load Calorie Map ----------
-with open("calories.json") as f:
-    calorie_map = json.load(f)
 
 IMG_SIZE = (160, 160)
 
 app = Flask(__name__)
 
+model = None
+class_names = []
+calorie_map = {}
 
-# ---------- Prediction Function ----------
+
+# ---------- Lazy Load Model (faster startup on Render) ----------
+def load_resources():
+
+    global model, class_names, calorie_map
+
+    if model is not None:
+        return
+
+    print("🔹 Loading model and resources...")
+
+    # load keras 3 model safely
+    model = load_model(
+        "food101_lightweight_mobilenet.h5",
+        compile=False,
+        safe_mode=False
+    )
+
+    # class labels
+    with open("class_names.json") as f:
+        class_names = json.load(f)
+
+    # calorie mapping
+    with open("calories.json") as f:
+        calorie_map = json.load(f)
+
+    print("✅ Model Ready")
+
+
+# ---------- Prediction ----------
 def predict_food(img_path):
+
+    load_resources()   # load only first request
 
     img = image.load_img(img_path, target_size=IMG_SIZE)
     img_array = image.img_to_array(img) / 255.0
@@ -30,21 +53,17 @@ def predict_food(img_path):
 
     preds = model.predict(img_array)
 
-    index = np.argmax(preds)
+    index = int(np.argmax(preds))
     confidence = float(np.max(preds) * 100)
 
-    # food label
     food_name = class_names[index]
 
-    # get calories (fallback = 250 kcal)
     calories = calorie_map.get(food_name, 250)
 
     return food_name, round(calories), round(confidence, 2)
 
 
-
 # ---------- Routes ----------
-
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -58,25 +77,26 @@ def about():
 @app.route("/predict", methods=["POST"])
 def upload_image():
 
-    # save uploaded image
     file = request.files["image"]
 
-    upload_path = os.path.join("static", "uploaded.jpg")
+    upload_dir = "static/uploads"
+    os.makedirs(upload_dir, exist_ok=True)
+
+    upload_path = os.path.join(upload_dir, "food.jpg")
     file.save(upload_path)
 
     food, calories, confidence = predict_food(upload_path)
 
     return render_template(
         "index.html",
+        uploaded=True,
+        img_path=upload_path,
         food=food,
         calories=calories,
-        confidence=confidence,
-        uploaded=True,
-        img_path=upload_path
+        confidence=confidence
     )
 
 
-
-# ---------- Run ----------
+# ---------- Run Local ----------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
