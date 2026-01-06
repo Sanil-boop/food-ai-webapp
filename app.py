@@ -2,7 +2,7 @@ import os
 import json
 import numpy as np
 from flask import Flask, render_template, request
-from keras.models import load_model
+from keras.saving import load_model          # <-- correct loader
 from tensorflow.keras.preprocessing import image
 
 IMG_SIZE = (160, 160)
@@ -23,16 +23,16 @@ def load_resources():
     if model is not None:
         return
 
-    print("🔹 Loading model & resources...")
+    print("🔹 Loading model (Keras 3 compatible)...")
 
-    # Safe load for Keras 3 model format
+    # Keras 3 model loader (required for your .h5 format)
     model = load_model(
         "food101_lightweight_mobilenet.h5",
         compile=False,
-        safe_mode=False
+        safe_mode=True
     )
 
-    # Load labels
+    # Load class labels
     with open("class_names.json") as f:
         class_names = json.load(f)
 
