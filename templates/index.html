@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>AI Food Recognition & Calorie Estimator</h1>
+
+<p class="subtitle">
+  Upload a food image to identify the dish and estimate its calories
+</p>
+
+
+<!-- LOADING OVERLAY -->
+<div id="loader" class="loader-overlay" style="display:none;">
+  <div class="loader-box">
+    <div class="loader-circle"></div>
+    <p>Analyzing food image...</p>
+  </div>
+</div>
+
+
+<!-- Upload Box -->
+<div class="card upload-box">
+
+  <form action="/predict"
+        method="POST"
+        enctype="multipart/form-data"
+        onsubmit="showLoader()">
+
+    <label class="upload-label">
+      Select Food Image
+    </label>
+
+    <input type="file"
+           name="image"
+           accept="image/*"
+           onchange="previewImage(event)"
+           required>
+
+    <!-- preview before upload -->
+    <img id="preview" class="preview-upload" style="display:none;">
+
+    <button type="submit">Analyze Food</button>
+
+  </form>
+
+</div>
+
+
+
+<!-- RESULT SECTION -->
+{% if uploaded %}
+<div class="card result-box">
+
+  <h2 class="section-title">Prediction Result</h2>
+
+  <!-- Predicted Image -->
+  <img src="{{ img_path }}" class="preview-img">
+
+  <h2>
+    🍽 Food Detected:
+    <span class="highlight">{{ food }}</span>
+  </h2>
+
+  <h3>
+    🔥 Estimated Calories:
+    <span class="highlight">{{ calories }} kcal</span>
+  </h3>
+
+  <p class="confidence-text">
+    🎯 Confidence:
+    <b>{{ confidence }}%</b>
+  </p>
+
+</div>
+{% endif %}
+
+
+
+<!-- Image Preview Script -->
+<script>
+function previewImage(event){
+  var img = document.getElementById("preview");
+  img.src = URL.createObjectURL(event.target.files[0]);
+  img.style.display = "block";
+}
+</script>
+
+
+<!-- Loader Script -->
+<script>
+function showLoader(){
+  document.getElementById("loader").style.display = "flex";
+}
+</script>
+
+
+{% endblock %}
