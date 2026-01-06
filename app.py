@@ -9,12 +9,13 @@ IMG_SIZE = (160, 160)
 
 app = Flask(__name__)
 
+# Global resources
 model = None
 class_names = []
 calorie_map = {}
 
 
-# ---------- Lazy Load Model (faster startup on Render) ----------
+# ---------- Lazy Load Model (first request only) ----------
 def load_resources():
 
     global model, class_names, calorie_map
@@ -22,20 +23,20 @@ def load_resources():
     if model is not None:
         return
 
-    print("🔹 Loading model and resources...")
+    print("🔹 Loading model & resources...")
 
-    # load keras 3 model safely
+    # Safe load for Keras 3 model format
     model = load_model(
         "food101_lightweight_mobilenet.h5",
         compile=False,
         safe_mode=False
     )
 
-    # class labels
+    # Load labels
     with open("class_names.json") as f:
         class_names = json.load(f)
 
-    # calorie mapping
+    # Load calorie mapping
     with open("calories.json") as f:
         calorie_map = json.load(f)
 
@@ -45,7 +46,7 @@ def load_resources():
 # ---------- Prediction ----------
 def predict_food(img_path):
 
-    load_resources()   # load only first request
+    load_resources()   # loads only once
 
     img = image.load_img(img_path, target_size=IMG_SIZE)
     img_array = image.img_to_array(img) / 255.0
@@ -90,13 +91,13 @@ def upload_image():
     return render_template(
         "index.html",
         uploaded=True,
-        img_path=upload_path,
+        img_path="/" + upload_path,
         food=food,
         calories=calories,
         confidence=confidence
     )
 
 
-# ---------- Run Local ----------
+# ---------- Local Run ----------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
